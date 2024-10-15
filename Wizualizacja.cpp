@@ -31,20 +31,19 @@ void checkShaderCompilation(GLuint shader, std::string shaderName) {
 	GLint isCompiled = 0;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
 
+	GLint logLength = 0;
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+	std::vector<GLchar> errorLog(logLength);
+	glGetShaderInfoLog(shader, logLength, &logLength, errorLog.data());
+
+	std::string message = (isCompiled == GL_TRUE)
+		? ("Compilation " + shaderName + " OK")
+		: ("Compilation " + shaderName + " ERROR\n" + errorLog.data());
+
+	std::cout << message << std::endl;
+
 	if (isCompiled == GL_FALSE) {
-		GLint logLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
-
-		std::vector<GLchar> errorLog(logLength);
-		glGetShaderInfoLog(shader, logLength, &logLength, errorLog.data());
-		std::cerr << "Compilation " << shaderName << " ERROR" << std::endl;
-		std::cerr << errorLog.data() << std::endl;
 		glDeleteShader(shader);
-
-		return;
-
-	} else {
-		std::cout << "Compilation " << shaderName << " OK" << std::endl;
 	}
 }
 
