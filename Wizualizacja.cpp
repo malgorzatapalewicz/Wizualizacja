@@ -3,6 +3,7 @@
 //#include "stdafx.h"
 #include <GL/glew.h>
 #include <SFML/Window.hpp>
+#include <iostream>
 
 // Kody shaderów
 const GLchar* vertexSource = R"glsl(
@@ -11,20 +12,42 @@ in vec2 position;
 in vec3 color;
 out vec3 Color;
 void main(){
-Color = color;
-gl_Position = vec4(position, 0.0, 1.0);
+	Color = color;
+	gl_Position = vec4(position, 0.0, 1.0);
 }
-)glsl";
+)glsl"; 
 
 const GLchar* fragmentSource = R"glsl(
 #version 150 core
 in vec3 Color;
 out vec4 outColor;
-void main()
-{
-outColor = vec4(Color, 1.0);
+void main(){
+	outColor = vec4(Color, 1.0);
 }
 )glsl";
+
+
+void checkShaderCompilation(GLuint shader, std::string shaderName) {
+	GLint isCompiled = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+
+	if (isCompiled == GL_FALSE) {
+		GLint logLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+
+		std::vector<GLchar> errorLog(logLength);
+		glGetShaderInfoLog(shader, logLength, &logLength, errorLog.data());
+		std::cerr << "Compilation " << shaderName << " ERROR" << std::endl;
+		std::cerr << errorLog.data() << std::endl;
+		glDeleteShader(shader);
+
+		return;
+
+	} else {
+		std::cout << "Compilation " << shaderName << " OK" << std::endl;
+	}
+}
+
 
 int main()
 {
@@ -45,7 +68,7 @@ int main()
 	glBindVertexArray(vao);
 
 	// Utworzenie VBO (Vertex Buffer Object)
-	// i skopiowanie do niego danych wierzcho?kowych
+	// i skopiowanie do niego danych wierzcholkowych
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 
@@ -58,16 +81,16 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// Utworzenie i skompilowanie shadera wierzcholkow
-	GLuint vertexShader =
-		glCreateShader(GL_VERTEX_SHADER);
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 	glCompileShader(vertexShader);
+	checkShaderCompilation(vertexShader, "vertexShader");
 
 	// Utworzenie i skompilowanie shadera fragmentow
-	GLuint fragmentShader =
-		glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
+	checkShaderCompilation(fragmentShader, "fragmentShader");
 
 	// Zlinkowanie obu shaderow w jeden wspolny program
 	GLuint shaderProgram = glCreateProgram();
