@@ -13,7 +13,7 @@ in vec3 color;
 out vec3 Color;
 void main(){
 	Color = color;
-	gl_Position = vec4(position, 1.0); //zmienione z vec4(position, 0.0, 1.0);
+	gl_Position = vec4(position, 1.0); 
 }
 )glsl"; 
 
@@ -47,6 +47,20 @@ void checkShaderCompilation(GLuint shader, std::string shaderName) {
 	}
 }
 
+void generateVertices(int numberOfVertices, float radius, std::vector<GLfloat>& vertices) {
+	vertices.clear(); 
+	for (int i = 0; i < numberOfVertices; ++i) {
+		float angle = 2.0f * 3.14159f * float(i) / float(numberOfVertices);
+		vertices.push_back(radius * cos(angle)); // x
+		vertices.push_back(radius * sin(angle)); // y
+		vertices.push_back(0.0f); // z
+		vertices.push_back((float)i / numberOfVertices); // R
+		vertices.push_back(1.0f - (float)i / numberOfVertices); // G
+		vertices.push_back((float)(i + 1) / numberOfVertices); // B
+	}
+}
+
+
 
 int main()
 {
@@ -71,13 +85,23 @@ int main()
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 
-	GLfloat vertices[] = {
-	0.0f, 0.5f, 1.0f, 1.0f, 0.7f, 0.7f, // x, y, z, rgb (zmienna normalizowana)
-	0.5f, -0.5f, 0.0f, 0.7f, 1.0f, 0.7f,
-	-0.5f, -0.5f, 0.0f, 0.7f, 0.7f, 1.0f
+	//dynamiczna
+	int numberOfVertices = 3; //poczatkowa liczba wierzcholkow (trojkat)
+	std::vector<GLfloat> vertices;
+	const GLfloat radius = 0.5f;
+	int currentMouseY = 0;
+	generateVertices(numberOfVertices, radius, vertices);
+
+	//statyczna
+/*	GLfloat vertices[] = {
+	0.0f, 0.5f, 1.0f, 1.0f, 0.5f, 0.5f, // x, y, z, RGB (zmienna normalizowana)
+	0.5f, -0.5f, 0.0f, 0.5f, 1.0f, 0.5f,
+	-0.5f, -0.5f, 0.0f, 0.5f, 0.5f, 1.0f
 	};
+	*/
+
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_STATIC_DRAW);
 
 	// Utworzenie i skompilowanie shadera wierzcholkow
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -109,6 +133,7 @@ int main()
 
 	// Rozpoczecie petli zdarzen
 	bool running = true;
+	GLenum primitiveType = GL_TRIANGLES;
 	while (running) {
 		sf::Event windowEvent;
 		while (window.pollEvent(windowEvent)) {
@@ -116,6 +141,37 @@ int main()
 			case sf::Event::Closed:
 				running = false;
 				break;
+
+			case sf::Event::MouseMoved: 
+				if (windowEvent.mouseMove.y > currentMouseY) {
+					numberOfVertices++;
+				} else if (windowEvent.mouseMove.y < currentMouseY && numberOfVertices > 3) {
+					numberOfVertices--;
+				}
+				currentMouseY = windowEvent.mouseMove.y;
+				vertices.clear();
+				generateVertices(numberOfVertices, radius, vertices);
+				glBindBuffer(GL_ARRAY_BUFFER, vbo);
+				glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_STATIC_DRAW);
+				break;
+
+			case sf::Event::KeyPressed:
+				switch (windowEvent.key.code) {
+				case sf::Keyboard::Num1: primitiveType = GL_POINTS; break;
+				case sf::Keyboard::Num2: primitiveType = GL_LINES; break;
+				case sf::Keyboard::Num3: primitiveType = GL_LINE_STRIP; break;
+				case sf::Keyboard::Num4: primitiveType = GL_LINE_LOOP; break;
+				case sf::Keyboard::Num5: primitiveType = GL_TRIANGLES; break;
+				case sf::Keyboard::Num6: primitiveType = GL_TRIANGLE_STRIP; break;
+				case sf::Keyboard::Num7: primitiveType = GL_TRIANGLE_FAN; break;
+				case sf::Keyboard::Num8: primitiveType = GL_QUADS; break;
+				case sf::Keyboard::Num9: primitiveType = GL_QUAD_STRIP; break;
+				case sf::Keyboard::Num0: primitiveType = GL_POLYGON; break;
+				case sf::Keyboard::Escape: running = false; break;
+				default: break;
+				}
+				
+			break;
 			}
 		}
 		// Nadanie scenie koloru czarnego
@@ -123,7 +179,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Narysowanie trojkata na podstawie 3 wierzcholkow
-		glDrawArrays(GL_TRIANGLES, 0, 3); //wie ze wspolrzedne trojkatne
+		glDrawArrays(primitiveType, 0, numberOfVertices); 
 		// Wymiana buforow tylni/przedni
 		window.display();
 	}
